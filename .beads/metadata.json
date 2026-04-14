@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "trendpulse",
+  "project_id": "6d139be8-9b9f-49b9-9a0b-d79499e80ae5"
+}
