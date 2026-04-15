@@ -101,13 +101,11 @@ cd trendpulse
 go mod download
 
 # 2. 启动 API Server（同时启动 Scheduler 定时计算）
-make run
-# 或：go run ./cmd/server
+go run ./cmd/server
 # Server 默认监听 http://localhost:8080
 
 # 3. 另开一个终端，启动交互式模拟器
-make simulate
-# 或：go run ./cmd/simulator
+go run ./cmd/simulator
 ```
 
 模拟器启动后显示数据生成计划，按 **Enter** 逐批发送信号，输入 `all` 全量发送，输入 `q` 退出：
