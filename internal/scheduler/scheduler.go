@@ -22,12 +22,15 @@ type Config struct {
 // Scheduler periodically triggers all registered strategies to compute
 // TrendStats for all trends and persists the results.
 type Scheduler struct {
-	trendRepo  repository.TrendRepository
-	signalRepo repository.SignalRepository
-	statsRepo  repository.StatsRepository
-	registry   *calculator.Registry
-	cfg        Config
-	logger     *slog.Logger
+	trendRepo    repository.TrendRepository
+	signalRepo   repository.SignalRepository
+	statsRepo    repository.StatsRepository
+	registry     *calculator.Registry
+	cfg          Config
+	logger       *slog.Logger
+	trigger      chan struct{} // buffered size 1
+	mu           sync.Mutex
+	simulatedNow *time.Time // non-nil when simulator has set an explicit time
 }
 
 // NewScheduler creates a Scheduler with the provided dependencies.
@@ -45,6 +48,34 @@ func NewScheduler(
 		registry:   registry,
 		cfg:        cfg,
 		logger:     slog.Default(),
+		trigger:    make(chan struct{}, 1),
+	}
+}
+
+// getCurrentTime returns the simulated time if set, otherwise time.Now().UTC().
+func (s *Scheduler) getCurrentTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.simulatedNow != nil {
+		return *s.simulatedNow
+	}
+	return time.Now().UTC()
+}
+
+// TriggerNow signals the scheduler to run a calculation round immediately.
+// If asOf is non-zero, it becomes the "current time" for the triggered run
+// (used by simulator to handle historical seed data).
+// Non-blocking: if a trigger is already pending, this is a no-op.
+func (s *Scheduler) TriggerNow(asOf time.Time) {
+	if !asOf.IsZero() {
+		s.mu.Lock()
+		t := asOf.UTC()
+		s.simulatedNow = &t
+		s.mu.Unlock()
+	}
+	select {
+	case s.trigger <- struct{}{}:
+	default:
 	}
 }
 
@@ -63,8 +94,16 @@ func (s *Scheduler) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
+			// Reset to real time for scheduled runs.
+			s.mu.Lock()
+			s.simulatedNow = nil
+			s.mu.Unlock()
 			if err := s.RunOnce(ctx); err != nil {
 				s.logger.Error("scheduler run failed", "error", err)
+			}
+		case <-s.trigger:
+			if err := s.RunOnce(ctx); err != nil {
+				s.logger.Error("scheduler triggered run failed", "error", err)
 			}
 		}
 	}
@@ -112,12 +151,13 @@ func (s *Scheduler) RunOnce(ctx context.Context) error {
 }
 
 func (s *Scheduler) runStrategy(ctx context.Context, strat calculator.Strategy, trends []*domain.Trend) {
+	now := s.getCurrentTime()
 	var statsToWrite []*domain.TrendStats
 	for _, trend := range trends {
 		if ctx.Err() != nil {
 			return
 		}
-		reader := NewSignalReader(trend.ID, s.signalRepo, s.cfg.SignalLookback)
+		reader := NewSignalReader(trend.ID, s.signalRepo, s.cfg.SignalLookback, now)
 		stats, err := strat.Calculate(ctx, trend, reader)
 		if err != nil {
 			s.logger.Error("strategy calculate failed",

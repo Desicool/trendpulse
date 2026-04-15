@@ -65,10 +65,10 @@ func defaultConfig() sigmoid.Config {
 		LookbackShort: 6 * time.Hour,
 		LookbackAccel: 3 * time.Hour,
 		PhaseThresholds: calculator.PhaseConfig{
-			ExplodingAccelThreshold:      0.5,
-			ExplodingEngagementThreshold: 0.3,
-			PeakingGrowthRateMax:         0.05,
-			PeakingGrowthRateMin:         -0.02,
+			RisingAccelThreshold:      0.5,
+			RisingEngagementThreshold: 0.3,
+			PeakingGrowthRateMax:      0.05,
+			PeakingGrowthRateMin:      -0.02,
 		},
 	}
 }
@@ -204,7 +204,7 @@ func TestSigmoidV1_ViralSignal_ExplodingWithHighScore(t *testing.T) {
 	if stats.Score <= 70.0 {
 		t.Errorf("Score = %v, want > 70 for viral signal", stats.Score)
 	}
-	if stats.Phase != "exploding" {
+	if stats.Phase != "rising" {
 		t.Errorf("Phase = %q, want exploding for viral signal", stats.Phase)
 	}
 	if stats.Score < 0 || stats.Score > 100 {

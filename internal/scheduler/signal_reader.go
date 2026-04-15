@@ -16,21 +16,24 @@ type repositorySignalReader struct {
 	trendID    string
 	signalRepo repository.SignalRepository
 	lookback   time.Duration
+	now        time.Time // anchor for Latest() and Aggregate() — set by scheduler
 }
 
 // NewSignalReader creates a SignalReader backed by the given SignalRepository.
 // All reads are scoped to trendID within the lookback window.
-func NewSignalReader(trendID string, repo repository.SignalRepository, lookback time.Duration) calculator.SignalReader {
+// now is the anchor time used by Latest() and Aggregate() as the upper bound.
+func NewSignalReader(trendID string, repo repository.SignalRepository, lookback time.Duration, now time.Time) calculator.SignalReader {
 	return &repositorySignalReader{
 		trendID:    trendID,
 		signalRepo: repo,
 		lookback:   lookback,
+		now:        now,
 	}
 }
 
 // Latest returns the most recent n signals for the trend, ascending by Timestamp.
 func (r *repositorySignalReader) Latest(ctx context.Context, n int) ([]*domain.Signal, error) {
-	now := time.Now().UTC()
+	now := r.now
 	from := now.Add(-r.lookback)
 	signals, err := r.signalRepo.ListByTrendID(ctx, r.trendID, from, now)
 	if err != nil {
@@ -57,7 +60,7 @@ func (r *repositorySignalReader) Range(ctx context.Context, from, to time.Time) 
 // Aggregate fetches all signals in the lookback window and groups them into
 // time buckets of `window` duration, computing per-bucket averages.
 func (r *repositorySignalReader) Aggregate(ctx context.Context, window time.Duration) ([]*calculator.AggregatedSignal, error) {
-	now := time.Now().UTC()
+	now := r.now
 	from := now.Add(-r.lookback)
 	signals, err := r.signalRepo.ListByTrendID(ctx, r.trendID, from, now)
 	if err != nil {

@@ -72,7 +72,7 @@ func makeSignals(trendID string, count int, lookback time.Duration) []*domain.Si
 func TestSignalReader_Latest_ReturnsNewestN(t *testing.T) {
 	signals := makeSignals("trend-001", 10, 48*time.Hour)
 	repo := &mockSignalRepo{signals: signals}
-	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour, time.Now().UTC())
 
 	got, err := reader.Latest(context.Background(), 3)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestSignalReader_Latest_FewerThanN_ReturnsAll(t *testing.T) {
 	// Use a shorter window than lookback so all signals are within range.
 	signals := makeSignals("trend-001", 2, 24*time.Hour)
 	repo := &mockSignalRepo{signals: signals}
-	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour, time.Now().UTC())
 
 	got, err := reader.Latest(context.Background(), 10)
 	if err != nil {
@@ -111,7 +111,7 @@ func TestSignalReader_Latest_FewerThanN_ReturnsAll(t *testing.T) {
 func TestSignalReader_Range_FiltersCorrectly(t *testing.T) {
 	signals := makeSignals("trend-001", 10, 48*time.Hour)
 	repo := &mockSignalRepo{signals: signals}
-	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour, time.Now().UTC())
 
 	now := time.Now().UTC()
 	from := now.Add(-24 * time.Hour)
@@ -132,7 +132,7 @@ func TestSignalReader_Range_FiltersCorrectly(t *testing.T) {
 func TestSignalReader_Aggregate_GroupsIntoWindows(t *testing.T) {
 	signals := makeSignals("trend-001", 12, 12*time.Hour)
 	repo := &mockSignalRepo{signals: signals}
-	reader := scheduler.NewSignalReader("trend-001", repo, 12*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 12*time.Hour, time.Now().UTC())
 
 	got, err := reader.Aggregate(context.Background(), 3*time.Hour)
 	if err != nil {
@@ -175,7 +175,7 @@ func TestSignalReader_Aggregate_ComputesAverages(t *testing.T) {
 		},
 	}
 	repo := &mockSignalRepo{signals: signals}
-	reader := scheduler.NewSignalReader("trend-001", repo, 6*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 6*time.Hour, time.Now().UTC())
 
 	got, err := reader.Aggregate(context.Background(), 6*time.Hour)
 	if err != nil {
@@ -204,7 +204,7 @@ func TestSignalReader_Aggregate_ComputesAverages(t *testing.T) {
 
 func TestSignalReader_Aggregate_EmptySignals_ReturnsEmpty(t *testing.T) {
 	repo := &mockSignalRepo{signals: nil}
-	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour)
+	reader := scheduler.NewSignalReader("trend-001", repo, 48*time.Hour, time.Now().UTC())
 
 	got, err := reader.Aggregate(context.Background(), time.Hour)
 	if err != nil {

@@ -11,19 +11,19 @@ type PhaseSignals struct {
 
 // PhaseConfig holds the classification thresholds for DeterminePhase.
 type PhaseConfig struct {
-	ExplodingAccelThreshold      float64
-	ExplodingEngagementThreshold float64
-	PeakingGrowthRateMax         float64
-	PeakingGrowthRateMin         float64
+	RisingAccelThreshold      float64
+	RisingEngagementThreshold float64
+	PeakingGrowthRateMax      float64
+	PeakingGrowthRateMin      float64
 }
 
 // DefaultPhaseConfig returns the default thresholds from the spec.
 func DefaultPhaseConfig() PhaseConfig {
 	return PhaseConfig{
-		ExplodingAccelThreshold:      0.5,
-		ExplodingEngagementThreshold: 0.3,
-		PeakingGrowthRateMax:         0.05,
-		PeakingGrowthRateMin:         -0.02,
+		RisingAccelThreshold:      0.5,
+		RisingEngagementThreshold: 0.3,
+		PeakingGrowthRateMax:      0.05,
+		PeakingGrowthRateMin:      -0.02,
 	}
 }
 
@@ -31,16 +31,16 @@ func DefaultPhaseConfig() PhaseConfig {
 //
 // Priority order:
 //  1. declining  — all metrics are negative
-//  2. exploding  — view acceleration AND engagement both above thresholds
+//  2. rising     — view acceleration AND engagement both above thresholds
 //  3. peaking    — post growth rate is near zero (inside [min, max])
 //  4. emerging   — everything else
 func DeterminePhase(s PhaseSignals, cfg PhaseConfig) string {
 	if s.AllMetricsNegative {
 		return "declining"
 	}
-	if s.ViewAcceleration > cfg.ExplodingAccelThreshold &&
-		s.EngagementGrowth > cfg.ExplodingEngagementThreshold {
-		return "exploding"
+	if s.ViewAcceleration > cfg.RisingAccelThreshold &&
+		s.EngagementGrowth > cfg.RisingEngagementThreshold {
+		return "rising"
 	}
 	if s.PostGrowthRate < cfg.PeakingGrowthRateMax &&
 		s.PostGrowthRate > cfg.PeakingGrowthRateMin {

@@ -32,7 +32,7 @@ func TestDeterminePhase(t *testing.T) {
 				EngagementGrowth:   0.6, // > 0.3 threshold
 				PostGrowthRate:     0.2,
 			},
-			wantPhase: "exploding",
+			wantPhase: "rising",
 		},
 		{
 			name: "accel_just_above_threshold_engagement_just_above_returns_exploding",
@@ -42,7 +42,7 @@ func TestDeterminePhase(t *testing.T) {
 				EngagementGrowth:   0.31,
 				PostGrowthRate:     0.5,
 			},
-			wantPhase: "exploding",
+			wantPhase: "rising",
 		},
 		{
 			name: "high_accel_but_low_engagement_not_exploding",
