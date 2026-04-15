@@ -223,7 +223,8 @@ GET /trends?offset=0&limit=10&phase=exploding
   "message": "ok",
   "data": {
     "trend": Trend,
-    "stats": TrendStats | null
+    "stats": TrendStats | null,
+    "signals": [Signal, ...]
   }
 }
 ```
@@ -280,7 +281,20 @@ GET /trends/trend-001
       "latest_avg_views": 12500.0,
       "latest_avg_engagement": 340.5,
       "latest_view_concentration": 0.72
-    }
+    },
+    "signals": [
+      {
+        "id": "signal-001",
+        "trend_id": "trend-001",
+        "timestamp": "2026-04-15T09:00:00Z",
+        "usage_count": 40000,
+        "unique_creators": 3500,
+        "avg_views": 11000.0,
+        "avg_engagement": 310.0,
+        "view_concentration": 0.70,
+        "created_at": "2026-04-15T09:00:05Z"
+      }
+    ]
   }
 }
 ```

@@ -17,7 +17,7 @@ import (
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func newTrendHandler(trendRepo *testutil.MockTrendRepo, statsRepo *testutil.MockStatsRepo) *handler.TrendHandler {
-	return handler.NewTrendHandler(trendRepo, statsRepo, "momentum_v1", 20, 100, 20, 0.0)
+	return handler.NewTrendHandler(trendRepo, statsRepo, testutil.NewMockSignalRepo(), "momentum_v1", 20, 100, 20, 0.0)
 }
 
 func decodeResponse(t *testing.T, body []byte) response.Response {
@@ -237,6 +237,9 @@ func TestTrendHandler_Get_ReturnsTrendWithStats(t *testing.T) {
 	if _, ok := data["stats"]; !ok {
 		t.Fatal("expected 'stats' key in data")
 	}
+	if _, ok := data["signals"]; !ok {
+		t.Fatal("expected 'signals' key in data")
+	}
 }
 
 func TestTrendHandler_Get_TrendNotFound_Returns404(t *testing.T) {
@@ -272,6 +275,9 @@ func TestTrendHandler_Get_TrendExistsButNoStats_ReturnsNullStats(t *testing.T) {
 	data := resp.Data.(map[string]interface{})
 	if data["stats"] != nil {
 		t.Fatalf("expected stats=null, got %v", data["stats"])
+	}
+	if _, ok := data["signals"]; !ok {
+		t.Fatal("expected 'signals' key in data")
 	}
 }
 
@@ -485,7 +491,7 @@ func TestTrendHandler_Rising_FiltersLowScores(t *testing.T) {
 	statsRepo.Upsert(nil, stat3) //nolint:errcheck
 
 	// Use min score of 60
-	h := handler.NewTrendHandler(trendRepo, statsRepo, "momentum_v1", 20, 100, 20, 60.0)
+	h := handler.NewTrendHandler(trendRepo, statsRepo, testutil.NewMockSignalRepo(), "momentum_v1", 20, 100, 20, 60.0)
 	req := httptest.NewRequest(http.MethodGet, "/trends/rising", nil)
 	w := httptest.NewRecorder()
 	h.Rising(w, req)
@@ -504,3 +510,47 @@ func TestTrendHandler_Rising_FiltersLowScores(t *testing.T) {
 
 // ── ensure time is importable (avoids unused-import lint) ────────────────────
 var _ = time.Now
+
+// TestTrendHandler_Get_ReturnsSignals verifies that signals associated with a
+// trend are returned in the "signals" field of the GET /trends/{id} response.
+func TestTrendHandler_Get_ReturnsSignals(t *testing.T) {
+	trendRepo := testutil.NewMockTrendRepo()
+	statsRepo := testutil.NewMockStatsRepo()
+	signalRepo := testutil.NewMockSignalRepo()
+
+	trendRepo.SetTrends([]*domain.Trend{testutil.NewTrend("trend-001")})
+
+	// Add two signals for the trend.
+	ts1 := time.Date(2026, 4, 15, 10, 0, 0, 0, time.UTC)
+	ts2 := time.Date(2026, 4, 15, 11, 0, 0, 0, time.UTC)
+	signalRepo.AddSignal(testutil.NewSignal("trend-001", ts1, 1000))
+	signalRepo.AddSignal(testutil.NewSignal("trend-001", ts2, 1200))
+
+	h := handler.NewTrendHandler(trendRepo, statsRepo, signalRepo, "momentum_v1", 20, 100, 20, 0.0)
+
+	req := httptest.NewRequest(http.MethodGet, "/trends/trend-001", nil)
+	req.SetPathValue("id", "trend-001")
+	w := httptest.NewRecorder()
+	h.Get(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	resp := decodeResponse(t, w.Body.Bytes())
+	if resp.Code != response.CodeOK {
+		t.Fatalf("expected code 0, got %d: %s", resp.Code, resp.Message)
+	}
+
+	data := resp.Data.(map[string]interface{})
+	rawSignals, ok := data["signals"]
+	if !ok {
+		t.Fatal("expected 'signals' key in data")
+	}
+	signals, ok := rawSignals.([]interface{})
+	if !ok {
+		t.Fatalf("expected signals to be an array, got %T", rawSignals)
+	}
+	if len(signals) != 2 {
+		t.Fatalf("expected 2 signals, got %d", len(signals))
+	}
+}

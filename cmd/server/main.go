@@ -86,6 +86,7 @@ func main() {
 	trendHandler := apihandler.NewTrendHandler(
 		trendRepo,
 		statsRepo,
+		signalRepo,
 		cfg.Scheduler.ActiveStrategy,
 		cfg.API.DefaultPageSize,
 		cfg.API.MaxPageSize,

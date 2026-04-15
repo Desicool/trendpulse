@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"trendpulse/internal/api/response"
 	"trendpulse/internal/domain"
@@ -23,6 +24,7 @@ var validPhases = map[string]bool{
 type TrendHandler struct {
 	trendRepo      repository.TrendRepository
 	statsRepo      repository.StatsRepository
+	signalRepo     repository.SignalRepository
 	activeStrategy string
 	defaultLimit   int
 	maxLimit       int
@@ -35,6 +37,7 @@ type TrendHandler struct {
 func NewTrendHandler(
 	trendRepo repository.TrendRepository,
 	statsRepo repository.StatsRepository,
+	signalRepo repository.SignalRepository,
 	activeStrategy string,
 	defaultLimit int,
 	maxLimit int,
@@ -44,6 +47,7 @@ func NewTrendHandler(
 	return &TrendHandler{
 		trendRepo:      trendRepo,
 		statsRepo:      statsRepo,
+		signalRepo:     signalRepo,
 		activeStrategy: activeStrategy,
 		defaultLimit:   defaultLimit,
 		maxLimit:       maxLimit,
@@ -163,9 +167,15 @@ func (h *TrendHandler) Get(w http.ResponseWriter, r *http.Request) {
 	stats, _ := h.statsRepo.GetByTrendID(ctx, id, h.activeStrategy)
 	// stats may be nil when no stats have been computed yet.
 
+	signals, _ := h.signalRepo.ListByTrendID(ctx, id, time.Time{}, time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC))
+	if signals == nil {
+		signals = []*domain.Signal{}
+	}
+
 	response.OK(w, map[string]interface{}{
-		"trend": trend,
-		"stats": stats,
+		"trend":   trend,
+		"stats":   stats,
+		"signals": signals,
 	})
 }
 
