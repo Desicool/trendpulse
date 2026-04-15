@@ -21,4 +21,4 @@ configs/config.local.yaml
 .dolt/
 *.db
 .beads-credential-key
-simulator
+/simulator

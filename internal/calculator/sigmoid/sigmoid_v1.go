@@ -84,8 +84,9 @@ func (s *SigmoidV1) Calculate(ctx context.Context, trend *domain.Trend, reader c
 	base.LatestAvgEngagement = latest.AvgEngagement
 	base.LatestViewConcentration = latest.ViewConcentration
 
-	// Fetch range signals for post/creator growth and engagement surge.
-	now := time.Now().UTC()
+	// Derive "now" from the latest signal timestamp (not wall-clock time),
+	// so simulated/historical data uses the correct time window.
+	now := latest.Timestamp
 	from := now.Add(-s.cfg.SignalLookback)
 	rangeSignals, err := reader.Range(ctx, from, now)
 	if err != nil {

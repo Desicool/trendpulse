@@ -17,6 +17,7 @@ import (
 func main() {
 	cfgPath := flag.String("config", "configs/config.yaml", "config file path")
 	dryRun := flag.Bool("dry-run", false, "print data without sending")
+	seed := flag.Bool("seed", true, "use fixed seed data for reproducible demo")
 	flag.Parse()
 
 	cfg, err := config.Load(*cfgPath)
@@ -49,16 +50,32 @@ func main() {
 	}
 
 	endTime := time.Now().UTC()
-	trends, batches := simulator.Generate(genCfg, endTime)
+
+	var trends []simulator.TrendSpec
+	var batches []simulator.SignalBatch
+
+	if *seed {
+		trends, batches = simulator.GenerateSeed(endTime)
+	} else {
+		trends, batches = simulator.Generate(genCfg, endTime)
+	}
 	hourlyBatches := simulator.GroupByHour(batches)
 
-	totalHours := genCfg.Days * 24
+	totalHours := len(hourlyBatches)
+	days := totalHours / 24
+	if totalHours%24 != 0 {
+		days++
+	}
 	startTime := endTime.Add(-time.Duration(totalHours) * time.Hour)
 
 	patternDist := simulator.PatternDistribution(trends)
 
 	// Print banner
-	printBanner(len(trends), genCfg.Days, totalHours, startTime, endTime, patternDist, cfg.Simulator.BaseURL)
+	if *seed {
+		printSeedBanner(trends, totalHours, days, startTime, endTime, patternDist, cfg.Simulator.BaseURL)
+	} else {
+		printBanner(len(trends), days, totalHours, startTime, endTime, patternDist, cfg.Simulator.BaseURL)
+	}
 
 	if *dryRun {
 		fmt.Println("  (dry-run 模式，不发送数据)")
@@ -180,9 +197,45 @@ func printBanner(trendCount, days, totalHours int, startTime, endTime time.Time,
 
 func printPatternDist(dist map[string]int) {
 	// Pre-formatted lines to avoid CJK alignment issues
-	fmt.Printf("    viral_spike     (爆发后快速衰退)   : %2d 个趋势\n", dist["viral_spike"])
-	fmt.Printf("    slow_burn       (缓慢积累持久爆发) : %2d 个趋势\n", dist["slow_burn"])
-	fmt.Printf("    steady_emerging (萌芽期稳定增长)   : %2d 个趋势\n", dist["steady_emerging"])
-	fmt.Printf("    already_peaking (从高峰期开始)     : %2d 个趋势\n", dist["already_peaking"])
-	fmt.Printf("    declining_only  (衰退中)           : %2d 个趋势\n", dist["declining_only"])
+	for pat, count := range dist {
+		fmt.Printf("    %-20s: %2d 个趋势\n", pat, count)
+	}
+}
+
+func printSeedBanner(trends []simulator.TrendSpec, totalHours, days int, startTime, endTime time.Time, patternDist map[string]int, baseURL string) {
+	fmt.Println("═══════════════════════════════════════════════════════")
+	fmt.Println("  TrendPulse 模拟器 — Seed 模式")
+	fmt.Println("═══════════════════════════════════════════════════════")
+	fmt.Printf("  趋势总数  : %d\n", len(trends))
+	fmt.Printf("  模拟时长  : %d 天（%d 批次，每批次 = 1 小时）\n", days, totalHours)
+	fmt.Printf("  时间起点  : %s\n", startTime.Format("2006-01-02 15:04 MST"))
+	fmt.Printf("  时间终点  : %s\n", endTime.Add(-time.Hour).Format("2006-01-02 15:04 MST"))
+	fmt.Println()
+	fmt.Println("  曲线分布:")
+	printPatternDist(patternDist)
+	fmt.Println()
+	fmt.Println("  Seed 趋势:")
+	seedPatterns := map[string]string{
+		"seed-0001": "viral_spike (h55 起爆)",
+		"seed-0002": "steady_emerging",
+		"seed-0003": "viral_spike (h20 起爆)",
+		"seed-0004": "slow_burn",
+		"seed-0005": "already_peaking",
+		"seed-0006": "declining",
+		"seed-0007": "flat",
+		"seed-0008": "very_slow_burn",
+	}
+	for _, t := range trends {
+		pat := seedPatterns[t.ID]
+		fmt.Printf("    %-10s %-16s %s\n", t.ID, t.Name, pat)
+	}
+	fmt.Println()
+	fmt.Println("  预期 Rising 时间线:")
+	fmt.Println("    批次 ~10  : #城市骑行日记 (指数增长从 h0 开始，最先达到阈值)")
+	fmt.Println("    批次 ~30  : #深夜食堂翻车 (h20 起爆，9h 后可计算加速度)")
+	fmt.Println("    批次 ~65  : #AI绘画挑战 (h55 起爆，9h 后可计算加速度)")
+	fmt.Println("    批次 ~70+ : #宿舍健身挑战 (缓慢燃烧，可能勉强触及阈值)")
+	fmt.Println()
+	fmt.Printf("  目标 Server : %s\n", baseURL)
+	fmt.Println("═══════════════════════════════════════════════════════")
 }

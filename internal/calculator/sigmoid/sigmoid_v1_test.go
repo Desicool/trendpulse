@@ -20,6 +20,10 @@ type mockSignalReader struct {
 	rangeErr   error
 	latestErr  error
 	aggrErr    error
+
+	// capturedRangeFrom/To record the arguments passed to Range.
+	capturedRangeFrom time.Time
+	capturedRangeTo   time.Time
 }
 
 func (m *mockSignalReader) Latest(_ context.Context, n int) ([]*domain.Signal, error) {
@@ -36,7 +40,9 @@ func (m *mockSignalReader) Latest(_ context.Context, n int) ([]*domain.Signal, e
 	return m.latest[start:], nil
 }
 
-func (m *mockSignalReader) Range(_ context.Context, _, _ time.Time) ([]*domain.Signal, error) {
+func (m *mockSignalReader) Range(_ context.Context, from, to time.Time) ([]*domain.Signal, error) {
+	m.capturedRangeFrom = from
+	m.capturedRangeTo = to
 	if m.rangeErr != nil {
 		return nil, m.rangeErr
 	}
@@ -352,5 +358,54 @@ func TestSigmoidV1_ID_And_Name(t *testing.T) {
 	}
 	if s.Name() == "" {
 		t.Error("Name() returned empty string")
+	}
+}
+
+func TestSigmoidV1_RangeUsesLatestSignalTimestamp(t *testing.T) {
+	cfg := defaultConfig()
+	cfg.SignalLookback = 24 * time.Hour
+	s := sigmoid.NewSigmoidV1(cfg)
+
+	// Use a timestamp far in the past so it cannot be confused with time.Now().
+	historicalNow := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+	signals := make([]*domain.Signal, 5)
+	for i := 0; i < 5; i++ {
+		ts := historicalNow.Add(-time.Duration(4-i) * time.Hour)
+		signals[i] = &domain.Signal{
+			ID:             "s" + string(rune('0'+i)),
+			TrendID:        "t-range",
+			Timestamp:      ts,
+			UsageCount:     100 + int64(i*10),
+			UniqueCreators: 10 + int64(i),
+			AvgViews:       500 + float64(i*50),
+		}
+	}
+	aggWindows := []*calculator.AggregatedSignal{
+		{AvgViews: 500, AvgUsageCount: 100, SampleCount: 1},
+		{AvgViews: 550, AvgUsageCount: 110, SampleCount: 1},
+		{AvgViews: 600, AvgUsageCount: 120, SampleCount: 1},
+	}
+
+	reader := &mockSignalReader{
+		latest:     signals,
+		rangeOut:   signals,
+		aggregated: aggWindows,
+	}
+
+	_, err := s.Calculate(context.Background(), newTrend("t-range"), reader)
+	if err != nil {
+		t.Fatalf("Calculate() error = %v", err)
+	}
+
+	// The latest signal's timestamp is historicalNow (2025-01-01 12:00).
+	// Range must be called with (historicalNow - 24h, historicalNow), NOT time.Now().
+	expectedTo := historicalNow
+	expectedFrom := historicalNow.Add(-24 * time.Hour)
+
+	if !reader.capturedRangeTo.Equal(expectedTo) {
+		t.Errorf("Range 'to' = %v, want %v (latest signal timestamp)", reader.capturedRangeTo, expectedTo)
+	}
+	if !reader.capturedRangeFrom.Equal(expectedFrom) {
+		t.Errorf("Range 'from' = %v, want %v", reader.capturedRangeFrom, expectedFrom)
 	}
 }
