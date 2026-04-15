@@ -65,8 +65,8 @@ type WeightsConfig struct {
 type PhaseThresholdsConfig struct {
 	RisingAccelThreshold      float64 `yaml:"rising_accel_threshold"`
 	RisingEngagementThreshold float64 `yaml:"rising_engagement_threshold"`
-	PeakingGrowthRateMax         float64 `yaml:"peaking_growth_rate_max"`
-	PeakingGrowthRateMin         float64 `yaml:"peaking_growth_rate_min"`
+	PeakingGrowthRateMax      float64 `yaml:"peaking_growth_rate_max"`
+	PeakingGrowthRateMin      float64 `yaml:"peaking_growth_rate_min"`
 }
 
 // StrategyConfig holds configuration for a single strategy.
@@ -85,10 +85,11 @@ type CalculatorConfig struct {
 
 // APIConfig holds REST API tuning parameters.
 type APIConfig struct {
-	DefaultPageSize    int `yaml:"default_page_size"`
-	MaxPageSize        int `yaml:"max_page_size"`
-	RisingDefaultLimit int `yaml:"rising_default_limit"`
-	RisingMaxLimit     int `yaml:"rising_max_limit"`
+	DefaultPageSize    int     `yaml:"default_page_size"`
+	MaxPageSize        int     `yaml:"max_page_size"`
+	RisingDefaultLimit int     `yaml:"rising_default_limit"`
+	RisingMaxLimit     int     `yaml:"rising_max_limit"`
+	RisingMinScore     float64 `yaml:"rising_min_score"`
 }
 
 // SimulatorDistributionConfig controls the mix of trend lifecycle types.
@@ -102,9 +103,9 @@ type SimulatorDistributionConfig struct {
 
 // SimulatorBaseParamsConfig holds baseline numeric parameters for data generation.
 type SimulatorBaseParamsConfig struct {
-	EmergingBaseUsage  int `yaml:"emerging_base_usage"`
-	RisingPeakUsage int `yaml:"rising_peak_usage"`
-	PeakingBaseViews   int `yaml:"peaking_base_views"`
+	EmergingBaseUsage int `yaml:"emerging_base_usage"`
+	RisingPeakUsage   int `yaml:"rising_peak_usage"`
+	PeakingBaseViews  int `yaml:"peaking_base_views"`
 }
 
 // SimulatorGenerationConfig controls the seed data generation details.
@@ -133,13 +134,13 @@ type LoggingConfig struct {
 
 // Config is the top-level configuration structure for TrendPulse.
 type Config struct {
-	Server     ServerConfig    `yaml:"server"`
-	Storage    StorageConfig   `yaml:"storage"`
-	Scheduler  SchedulerConfig `yaml:"scheduler"`
+	Server     ServerConfig     `yaml:"server"`
+	Storage    StorageConfig    `yaml:"storage"`
+	Scheduler  SchedulerConfig  `yaml:"scheduler"`
 	Calculator CalculatorConfig `yaml:"calculator"`
-	API        APIConfig       `yaml:"api"`
-	Simulator  SimulatorConfig `yaml:"simulator"`
-	Logging    LoggingConfig   `yaml:"logging"`
+	API        APIConfig        `yaml:"api"`
+	Simulator  SimulatorConfig  `yaml:"simulator"`
+	Logging    LoggingConfig    `yaml:"logging"`
 }
 
 // Load reads a YAML configuration file from path and returns a populated Config.

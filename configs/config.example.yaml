@@ -98,6 +98,8 @@ api:
   rising_default_limit: 10
   # "上升趋势" 接口最大返回条数
   rising_max_limit: 50
+  # "上升趋势" 接口最低分数阈值（低于此分数的趋势不返回）
+  rising_min_score: 60.0
 
 # ─────────────────────────────────────────────
 # 模拟器配置（仅 cmd/simulator 使用）

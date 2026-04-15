@@ -42,6 +42,7 @@ api:
   max_page_size: 100
   rising_default_limit: 10
   rising_max_limit: 50
+  rising_min_score: 60.0
 
 simulator:
   base_url: "http://localhost:8080"

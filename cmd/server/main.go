@@ -65,8 +65,8 @@ func main() {
 		PhaseThresholds: calculator.PhaseConfig{
 			RisingAccelThreshold:      pt.RisingAccelThreshold,
 			RisingEngagementThreshold: pt.RisingEngagementThreshold,
-			PeakingGrowthRateMax:         pt.PeakingGrowthRateMax,
-			PeakingGrowthRateMin:         pt.PeakingGrowthRateMin,
+			PeakingGrowthRateMax:      pt.PeakingGrowthRateMax,
+			PeakingGrowthRateMin:      pt.PeakingGrowthRateMin,
 		},
 		SignalLookback: cfg.Scheduler.SignalLookback.Duration,
 	}
@@ -90,6 +90,7 @@ func main() {
 		cfg.API.DefaultPageSize,
 		cfg.API.MaxPageSize,
 		cfg.API.RisingDefaultLimit,
+		cfg.API.RisingMinScore,
 	)
 	ingestHandler := apihandler.NewIngestHandler(trendRepo, signalRepo, categoryIndex)
 

@@ -17,7 +17,7 @@ import (
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func newTrendHandler(trendRepo *testutil.MockTrendRepo, statsRepo *testutil.MockStatsRepo) *handler.TrendHandler {
-	return handler.NewTrendHandler(trendRepo, statsRepo, "momentum_v1", 20, 100, 20)
+	return handler.NewTrendHandler(trendRepo, statsRepo, "momentum_v1", 20, 100, 20, 0.0)
 }
 
 func decodeResponse(t *testing.T, body []byte) response.Response {
@@ -395,8 +395,8 @@ func TestTrendHandler_Rising_SkipsMissingTrends(t *testing.T) {
 
 	stat1 := testutil.NewTrendStats("momentum_v1", "trend-001", 90)
 	stat2 := testutil.NewTrendStats("momentum_v1", "trend-002", 80) // no matching trend
-	statsRepo.Upsert(nil, stat1) //nolint:errcheck
-	statsRepo.Upsert(nil, stat2) //nolint:errcheck
+	statsRepo.Upsert(nil, stat1)                                    //nolint:errcheck
+	statsRepo.Upsert(nil, stat2)                                    //nolint:errcheck
 
 	h := newTrendHandler(trendRepo, statsRepo)
 	req := httptest.NewRequest(http.MethodGet, "/trends/rising?limit=10", nil)
@@ -463,6 +463,42 @@ func TestTrendHandler_Rising_UsesActiveStrategy(t *testing.T) {
 	items := data["items"].([]interface{})
 	if len(items) != 0 {
 		t.Fatalf("expected 0 items (wrong strategy), got %d", len(items))
+	}
+}
+
+func TestTrendHandler_Rising_FiltersLowScores(t *testing.T) {
+	trendRepo := testutil.NewMockTrendRepo()
+	statsRepo := testutil.NewMockStatsRepo()
+
+	trendRepo.SetTrends([]*domain.Trend{
+		testutil.NewTrend("trend-001"),
+		testutil.NewTrend("trend-002"),
+		testutil.NewTrend("trend-003"),
+	})
+
+	// Create stats with varying scores
+	stat1 := testutil.NewTrendStats("momentum_v1", "trend-001", 85.0)
+	stat2 := testutil.NewTrendStats("momentum_v1", "trend-002", 40.0)
+	stat3 := testutil.NewTrendStats("momentum_v1", "trend-003", 70.0)
+	statsRepo.Upsert(nil, stat1) //nolint:errcheck
+	statsRepo.Upsert(nil, stat2) //nolint:errcheck
+	statsRepo.Upsert(nil, stat3) //nolint:errcheck
+
+	// Use min score of 60
+	h := handler.NewTrendHandler(trendRepo, statsRepo, "momentum_v1", 20, 100, 20, 60.0)
+	req := httptest.NewRequest(http.MethodGet, "/trends/rising", nil)
+	w := httptest.NewRecorder()
+	h.Rising(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	resp := decodeResponse(t, w.Body.Bytes())
+	data := resp.Data.(map[string]interface{})
+	items := data["items"].([]interface{})
+	// Only trend-001 (85) and trend-003 (70) should appear
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items above threshold, got %d", len(items))
 	}
 }
 

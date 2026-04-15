@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"trendpulse/internal/api/response"
+	"trendpulse/internal/domain"
 	"trendpulse/internal/repository"
 )
 
@@ -26,6 +27,7 @@ type TrendHandler struct {
 	defaultLimit   int
 	maxLimit       int
 	risingTopK     int
+	risingMinScore float64
 }
 
 // NewTrendHandler constructs a TrendHandler with the supplied dependencies and
@@ -37,6 +39,7 @@ func NewTrendHandler(
 	defaultLimit int,
 	maxLimit int,
 	risingTopK int,
+	risingMinScore float64,
 ) *TrendHandler {
 	return &TrendHandler{
 		trendRepo:      trendRepo,
@@ -45,6 +48,7 @@ func NewTrendHandler(
 		defaultLimit:   defaultLimit,
 		maxLimit:       maxLimit,
 		risingTopK:     risingTopK,
+		risingMinScore: risingMinScore,
 	}
 }
 
@@ -181,6 +185,17 @@ func (h *TrendHandler) Rising(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, response.CodeInternal, "failed to list rising stats")
 		return
+	}
+
+	// Filter by minimum score threshold
+	if h.risingMinScore > 0 {
+		filtered := make([]*domain.TrendStats, 0, len(statsList))
+		for _, s := range statsList {
+			if s.Score >= h.risingMinScore {
+				filtered = append(filtered, s)
+			}
+		}
+		statsList = filtered
 	}
 
 	type risingItem struct {
