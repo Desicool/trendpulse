@@ -46,9 +46,20 @@ api:
 
 simulator:
   base_url: "http://localhost:8080"
-  trend_count: 50
-  signals_per_trend: 168
-  signal_interval: 1h
+  generation:
+    trend_count: 50
+    days: 4
+    noise_pct: 0.10
+    distribution:
+      steady_emerging: 0.30
+      viral_spike:     0.25
+      slow_burn:       0.20
+      already_peaking: 0.15
+      declining_only:  0.10
+    base_params:
+      emerging_base_usage:     500
+      exploding_peak_usage:    50000
+      peaking_base_views:      1000000
   categories:
     - "时尚"
     - "生活"
