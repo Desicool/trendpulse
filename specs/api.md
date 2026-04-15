@@ -498,7 +498,9 @@ Content-Type: application/json
   "timestamp": "string RFC3339 (必填)",
   "usage_count": 12345,
   "unique_creators": 890,
-  "avg_views": 5600.0
+  "avg_views": 5600.0,
+  "avg_engagement": 340.5,
+  "view_concentration": 0.72
 }
 ```
 
@@ -509,6 +511,8 @@ Content-Type: application/json
 | `usage_count` | int64 | 是 | 该时刻的使用/发布次数 |
 | `unique_creators` | int64 | 是 | 该时刻的独立创作者数量 |
 | `avg_views` | float64 | 是 | 该时刻内容的平均播放量 |
+| `avg_engagement` | float64 | 否 | ≥ 0.0 if provided；默认为 0.0；每 post 平均互动数（likes+comments+shares） |
+| `view_concentration` | float64 | 否 | [0.0, 1.0] if provided；默认为 0.0；播放量中 top video 所占比例 |
 
 #### 响应体
 
@@ -541,7 +545,9 @@ Content-Type: application/json
   "timestamp": "2026-04-15T10:00:00Z",
   "usage_count": 45200,
   "unique_creators": 3800,
-  "avg_views": 12500.0
+  "avg_views": 12500.0,
+  "avg_engagement": 340.5,
+  "view_concentration": 0.72
 }
 ```
 
@@ -554,6 +560,8 @@ Content-Type: application/json
 | timestamp 缺失或格式错误 | 422 | `42201` |
 | trend_id 对应趋势不存在 | 404 | `40401` |
 | usage_count 为负数 | 400 | `40001` |
+| avg_engagement 为负数 | 400 | `40001` |
+| view_concentration 不在 [0.0, 1.0] 范围内（且非零） | 400 | `40001` |
 
 ---
 

@@ -486,6 +486,53 @@ calculator:
 
 ---
 
+## Sparse Field Handling
+
+某些数据来源不提供 `avg_engagement` 和 `view_concentration` 字段，这两个字段在摄取时可选，缺失时默认为 `0.0`。所有策略实现必须按以下规则处理稀疏信号：
+
+### 0.0 = 数据不可用
+
+对于可选字段 `avg_engagement` 和 `view_concentration`，`0.0` 表示数据不可用（非真实零值）。
+
+### 维度级别过滤
+
+计算 `engagement_surge` 或 `view_conc` 维度时：
+
+1. 过滤掉该字段为 `0.0` 的信号
+2. 若过滤后有效数据点 < 2，跳过该维度（将该维度权重视为 0 参与此次评分计算）
+
+核心字段 `usage_count`、`unique_creators`、`avg_views` 始终为必填字段，不做过滤。
+
+### 置信度公式
+
+```
+confidence = (valid_signal_count / expected_signal_count) × dimension_coverage
+```
+
+- `valid_signal_count`：当前 lookback 窗口内实际有效信号数量
+- `expected_signal_count`：`lookback / signal_interval`（来自配置）
+- `dimension_coverage`：5 个维度中拥有 ≥ 2 个非零数据点的维度比例
+
+### 最小数据保护
+
+若 `valid_signal_count < 2`，策略应提前返回：
+
+```go
+return &domain.TrendStats{
+    ID:           fmt.Sprintf("%s:%s", s.ID(), trend.ID),
+    TrendID:      trend.ID,
+    StrategyID:   s.ID(),
+    CalculatedAt: time.Now().UTC(),
+    Score:        0,
+    Confidence:   0,
+    Phase:        "emerging",
+}, nil
+```
+
+此规则是对空信号合约（见"接口合约"第4条）的扩展，适用于信号数量极少的情形。
+
+---
+
 ## 扩展指南：添加新策略
 
 以下步骤说明如何添加名为 `regional_v1` 的新策略：
