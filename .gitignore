@@ -1,4 +1,22 @@
 
+# Build output
+/bin/
+*.exe
+
+# Data directory (BadgerDB files)
+/data/
+
+# Go build cache
+*.test
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Config overrides
+configs/config.local.yaml
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

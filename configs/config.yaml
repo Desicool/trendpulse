@@ -1,0 +1,73 @@
+# TrendPulse 配置文件
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 10s
+
+storage:
+  type: "badger"
+  badger:
+    dir: "./data/badger"
+    value_dir: "./data/badger"
+    in_memory: false
+
+scheduler:
+  interval: 60m
+  signal_lookback: 168h
+  active_strategies:
+    - "momentum_v1"
+    - "velocity_v1"
+  active_strategy: "momentum_v1"
+
+calculator:
+  default_strategy:
+    weights:
+      view_acceleration:   2.5
+      post_growth_rate:    1.5
+      creator_growth_rate: 1.5
+      engagement_surge:    2.0
+      view_concentration:  1.0
+    bias: 3.0
+    lookback_short: 6h
+    lookback_accel: 3h
+    phase_thresholds:
+      exploding_accel_threshold:       0.5
+      exploding_engagement_threshold:  0.3
+      peaking_growth_rate_max:         0.05
+      peaking_growth_rate_min:        -0.02
+
+api:
+  default_page_size: 20
+  max_page_size: 100
+  rising_default_limit: 10
+  rising_max_limit: 50
+
+simulator:
+  base_url: "http://localhost:8080"
+  trend_count: 50
+  signals_per_trend: 168
+  signal_interval: 1h
+  categories:
+    - "时尚"
+    - "生活"
+    - "美食"
+    - "旅行"
+    - "科技"
+    - "健身"
+    - "音乐"
+    - "搞笑"
+  regions:
+    - "cn"
+    - "us"
+    - "jp"
+    - "kr"
+  trend_types:
+    - "hashtag"
+    - "sound"
+    - "effect"
+
+logging:
+  level: "info"
+  format: "json"

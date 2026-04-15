@@ -1,0 +1,143 @@
+# TrendPulse 配置示例文件
+# 复制此文件为 config.local.yaml 并按需修改（本地覆盖不会提交至版本控制）
+
+# ─────────────────────────────────────────────
+# HTTP 服务器配置
+# ─────────────────────────────────────────────
+server:
+  # 监听地址，0.0.0.0 表示监听所有网络接口
+  host: "0.0.0.0"
+  # 监听端口
+  port: 8080
+  # HTTP 读取超时时间（Go duration 格式：s=秒, m=分钟）
+  read_timeout: 10s
+  # HTTP 写入超时时间
+  write_timeout: 10s
+
+# ─────────────────────────────────────────────
+# 存储后端配置
+# ─────────────────────────────────────────────
+storage:
+  # 存储类型，当前支持: "badger"
+  # 未来可扩展为 "mongo" 或 "postgres"
+  type: "badger"
+  badger:
+    # BadgerDB 数据目录（键存储）
+    dir: "./data/badger"
+    # BadgerDB 值存储目录（可与 dir 相同，也可分离到高速磁盘）
+    value_dir: "./data/badger"
+    # 是否使用内存模式（true = 不持久化，适合测试）
+    in_memory: false
+
+# ─────────────────────────────────────────────
+# 调度器配置
+# ─────────────────────────────────────────────
+scheduler:
+  # 趋势重新计算的触发间隔
+  interval: 60m
+  # 计算趋势分数时回溯的信号时间窗口（168h = 7天）
+  signal_lookback: 168h
+  # 并行运行的策略列表（计算后取最高分）
+  active_strategies:
+    - "momentum_v1"
+    - "velocity_v1"
+  # 单一生效策略（当不使用并行模式时）
+  active_strategy: "momentum_v1"
+
+# ─────────────────────────────────────────────
+# 趋势计算策略参数
+# ─────────────────────────────────────────────
+calculator:
+  # ── 动量策略 v1 ──────────────────────────────
+  momentum_v1:
+    # 时间衰减因子（0~1），越小衰减越快，旧信号权重越低
+    decay_factor: 0.85
+    # 计算趋势分数所需的最少信号数量
+    min_signals: 3
+    # 各维度在原始分数中的权重（三者之和应为 1.0）
+    score_weights:
+      usage_count: 0.4       # 使用次数权重
+      unique_creators: 0.35  # 独立创作者数权重
+      avg_views: 0.25        # 平均播放量权重
+    # 趋势阶段判断阈值（分数单位）
+    phase_thresholds:
+      emerging_min_score: 20.0  # 分数 >= 20 判定为 emerging（萌芽）
+      growing_min_score: 50.0   # 分数 >= 50 判定为 growing（成长）
+      peaking_min_score: 80.0   # 分数 >= 80 判定为 peaking（顶峰）
+
+  # ── 速度策略 v1 ──────────────────────────────
+  velocity_v1:
+    # 用于计算速度的滑动窗口大小（信号数）
+    window_size: 5
+    # 加速度在最终分数中的权重
+    acceleration_weight: 0.6
+    # 速度在最终分数中的权重
+    velocity_weight: 0.4
+    # 最少信号数要求
+    min_signals: 3
+    # 各维度权重（同 momentum_v1）
+    score_weights:
+      usage_count: 0.4
+      unique_creators: 0.35
+      avg_views: 0.25
+    # 趋势阶段阈值（velocity 策略阈值略低于 momentum）
+    phase_thresholds:
+      emerging_min_score: 15.0
+      growing_min_score: 45.0
+      peaking_min_score: 75.0
+
+# ─────────────────────────────────────────────
+# API 行为配置
+# ─────────────────────────────────────────────
+api:
+  # 列表接口默认每页返回条数
+  default_page_size: 20
+  # 列表接口每页最大条数（防止超大请求）
+  max_page_size: 100
+  # "上升趋势" 接口默认返回条数
+  rising_default_limit: 10
+  # "上升趋势" 接口最大返回条数
+  rising_max_limit: 50
+
+# ─────────────────────────────────────────────
+# 模拟器配置（仅 cmd/simulator 使用）
+# ─────────────────────────────────────────────
+simulator:
+  # 目标 API Server 地址
+  base_url: "http://localhost:8080"
+  # 模拟生成的趋势话题总数
+  trend_count: 50
+  # 每个趋势生成的历史信号条数（168 = 7天每小时一条）
+  signals_per_trend: 168
+  # 相邻信号之间的时间间隔
+  signal_interval: 1h
+  # 趋势所属分类列表（随机选取）
+  categories:
+    - "时尚"
+    - "生活"
+    - "美食"
+    - "旅行"
+    - "科技"
+    - "健身"
+    - "音乐"
+    - "搞笑"
+  # 地区代码列表（随机选取）
+  regions:
+    - "cn"
+    - "us"
+    - "jp"
+    - "kr"
+  # 趋势类型列表（随机选取）
+  trend_types:
+    - "hashtag"   # 话题标签
+    - "sound"     # 音频/BGM
+    - "effect"    # 特效滤镜
+
+# ─────────────────────────────────────────────
+# 日志配置
+# ─────────────────────────────────────────────
+logging:
+  # 日志级别: debug | info | warn | error
+  level: "info"
+  # 输出格式: json（生产推荐）| text（本地调试）
+  format: "json"
