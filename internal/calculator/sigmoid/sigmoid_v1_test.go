@@ -67,7 +67,14 @@ func defaultConfig() sigmoid.Config {
 			EngagementSurge:   2.0,
 			ViewConcentration: 1.0,
 		},
-		Bias:          3.0,
+		FeatureNorms: sigmoid.FeatureNormsConfig{
+			ViewAcceleration:  sigmoid.FeatureNormConfig{Center: 0.0, Scale: 0.5},
+			PostGrowthRate:    sigmoid.FeatureNormConfig{Center: 0.0, Scale: 2.0},
+			CreatorGrowthRate: sigmoid.FeatureNormConfig{Center: 0.0, Scale: 2.0},
+			EngagementSurge:   sigmoid.FeatureNormConfig{Center: 1.0, Scale: 2.0},
+			ViewConcentration: sigmoid.FeatureNormConfig{Center: 0.5, Scale: 2.0},
+		},
+		Bias:          4.25,
 		LookbackShort: 6 * time.Hour,
 		LookbackAccel: 3 * time.Hour,
 		PhaseThresholds: calculator.PhaseConfig{

@@ -28,7 +28,23 @@ calculator:
       creator_growth_rate: 1.5
       engagement_surge:    2.0
       view_concentration:  1.0
-    bias: 3.0
+    feature_norms:
+      view_acceleration:
+        center: 0.0
+        scale:  0.5
+      post_growth_rate:
+        center: 0.0
+        scale:  2.0
+      creator_growth_rate:
+        center: 0.0
+        scale:  2.0
+      engagement_surge:
+        center: 1.0
+        scale:  2.0
+      view_concentration:
+        center: 0.5
+        scale:  2.0
+    bias: 4.25
     lookback_short: 6h
     lookback_accel: 3h
     phase_thresholds:

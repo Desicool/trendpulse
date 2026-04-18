@@ -387,11 +387,24 @@ Score 回答"该趋势在未来 48 小时内是否会进入爆发期或高峰期
 
 ### 公式
 
+各特征值先经过逐特征 logistic 归一化，再参与加权求和：
+
 ```
-raw = α·view_accel + β·post_growth + γ·creator_growth + δ·engagement_surge + ε·view_conc - bias
+feature_norm(x, center, scale) = sigmoid((x − center) × scale)
+
+view_accel_norm       = feature_norm(view_accel,       center_a, scale_a)
+post_growth_norm      = feature_norm(post_growth,       center_p, scale_p)
+creator_growth_norm   = feature_norm(creator_growth,    center_c, scale_c)
+engagement_surge_norm = feature_norm(engagement_surge,  center_e, scale_e)
+view_conc_norm        = feature_norm(view_conc,         center_v, scale_v)
+
+raw = α·view_accel_norm + β·post_growth_norm + γ·creator_growth_norm
+    + δ·engagement_surge_norm + ε·view_conc_norm − bias
 
 Score = 100 × sigmoid(raw)    其中 sigmoid(x) = 1 / (1 + e^(−x))
 ```
+
+归一化的作用：将各特征映射到 [0, 1] 区间，消除原始量纲差异（如 view_accel 可达 100000+，而 view_conc 仅在 [0,1]）。`center` 对应中性输入值，`scale` 控制灵敏度。
 
 所有系数通过配置文件调整，默认值：
 
@@ -404,7 +417,23 @@ calculator:
       creator_growth_rate: 1.5   # γ — 创作者增长率权重
       engagement_surge:    2.0   # δ — 互动激增率权重
       view_concentration:  1.0   # ε — 播放集中度权重
-    bias: 3.0                    # sigmoid 中心偏移（控制基准分）
+    feature_norms:
+      view_acceleration:
+        center: 0.0   # 加速度 = 0 为中性
+        scale:  0.5   # 对大值有平滑效果
+      post_growth_rate:
+        center: 0.0   # 增长率 = 0 为中性
+        scale:  2.0
+      creator_growth_rate:
+        center: 0.0
+        scale:  2.0
+      engagement_surge:
+        center: 1.0   # ratio = 1.0 为中性（等于均值）
+        scale:  2.0
+      view_concentration:
+        center: 0.5   # [0,1] 字段，0.5 为中性
+        scale:  2.0
+    bias: 4.25                   # 推导：中性输入 → 所有 norm=0.5 → 加权和=(2.5+1.5+1.5+2.0+1.0)×0.5=4.25
     lookback_short: "6h"         # 短期窗口（post/creator 增长率计算）
     lookback_accel: "3h"         # 加速度计算窗口（需 3 个数据点）
 ```

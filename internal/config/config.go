@@ -61,6 +61,21 @@ type WeightsConfig struct {
 	ViewConcentration float64 `yaml:"view_concentration"`
 }
 
+// FeatureNormConfig holds the per-feature logistic normalization parameters.
+type FeatureNormConfig struct {
+	Center float64 `yaml:"center"`
+	Scale  float64 `yaml:"scale"`
+}
+
+// FeatureNormsConfig holds normalization parameters for all five score features.
+type FeatureNormsConfig struct {
+	ViewAcceleration  FeatureNormConfig `yaml:"view_acceleration"`
+	PostGrowthRate    FeatureNormConfig `yaml:"post_growth_rate"`
+	CreatorGrowthRate FeatureNormConfig `yaml:"creator_growth_rate"`
+	EngagementSurge   FeatureNormConfig `yaml:"engagement_surge"`
+	ViewConcentration FeatureNormConfig `yaml:"view_concentration"`
+}
+
 // PhaseThresholdsConfig holds the phase classification thresholds.
 type PhaseThresholdsConfig struct {
 	RisingAccelThreshold      float64 `yaml:"rising_accel_threshold"`
@@ -72,6 +87,7 @@ type PhaseThresholdsConfig struct {
 // StrategyConfig holds configuration for a single strategy.
 type StrategyConfig struct {
 	Weights         WeightsConfig         `yaml:"weights"`
+	FeatureNorms    FeatureNormsConfig    `yaml:"feature_norms"`
 	Bias            float64               `yaml:"bias"`
 	LookbackShort   Duration              `yaml:"lookback_short"`
 	LookbackAccel   Duration              `yaml:"lookback_accel"`

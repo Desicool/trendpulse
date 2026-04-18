@@ -51,6 +51,7 @@ func main() {
 
 	ds := cfg.Calculator.DefaultStrategy
 	pt := ds.PhaseThresholds
+	fn := ds.FeatureNorms
 	sigCfg := sigmoid.Config{
 		Weights: sigmoid.WeightsConfig{
 			ViewAcceleration:  ds.Weights.ViewAcceleration,
@@ -58,6 +59,13 @@ func main() {
 			CreatorGrowthRate: ds.Weights.CreatorGrowthRate,
 			EngagementSurge:   ds.Weights.EngagementSurge,
 			ViewConcentration: ds.Weights.ViewConcentration,
+		},
+		FeatureNorms: sigmoid.FeatureNormsConfig{
+			ViewAcceleration:  sigmoid.FeatureNormConfig{Center: fn.ViewAcceleration.Center, Scale: fn.ViewAcceleration.Scale},
+			PostGrowthRate:    sigmoid.FeatureNormConfig{Center: fn.PostGrowthRate.Center, Scale: fn.PostGrowthRate.Scale},
+			CreatorGrowthRate: sigmoid.FeatureNormConfig{Center: fn.CreatorGrowthRate.Center, Scale: fn.CreatorGrowthRate.Scale},
+			EngagementSurge:   sigmoid.FeatureNormConfig{Center: fn.EngagementSurge.Center, Scale: fn.EngagementSurge.Scale},
+			ViewConcentration: sigmoid.FeatureNormConfig{Center: fn.ViewConcentration.Center, Scale: fn.ViewConcentration.Scale},
 		},
 		Bias:          ds.Bias,
 		LookbackShort: ds.LookbackShort.Duration,

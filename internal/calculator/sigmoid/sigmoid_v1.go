@@ -19,9 +19,26 @@ type WeightsConfig struct {
 	ViewConcentration float64
 }
 
+// FeatureNormConfig holds the per-feature logistic normalization parameters.
+// The normalization formula is: sigmoid((x - Center) * Scale)
+type FeatureNormConfig struct {
+	Center float64
+	Scale  float64
+}
+
+// FeatureNormsConfig holds normalization parameters for all five score features.
+type FeatureNormsConfig struct {
+	ViewAcceleration  FeatureNormConfig
+	PostGrowthRate    FeatureNormConfig
+	CreatorGrowthRate FeatureNormConfig
+	EngagementSurge   FeatureNormConfig
+	ViewConcentration FeatureNormConfig
+}
+
 // Config is the configuration for the sigmoid_v1 strategy.
 type Config struct {
 	Weights         WeightsConfig
+	FeatureNorms    FeatureNormsConfig
 	Bias            float64
 	LookbackShort   time.Duration
 	LookbackAccel   time.Duration
@@ -183,16 +200,24 @@ func (s *SigmoidV1) Calculate(ctx context.Context, trend *domain.Trend, reader c
 	}
 	dimensionCoverage := float64(covered) / 5.0
 
+	// --- Per-feature normalization ---
+	fn := s.cfg.FeatureNorms
+	viewAccelNorm := featureNorm(viewAccel, fn.ViewAcceleration.Center, fn.ViewAcceleration.Scale)
+	postGrowthNorm := featureNorm(postGrowth, fn.PostGrowthRate.Center, fn.PostGrowthRate.Scale)
+	creatorGrowthNorm := featureNorm(creatorGrowth, fn.CreatorGrowthRate.Center, fn.CreatorGrowthRate.Scale)
+	engagementSurgeNorm := featureNorm(engagementSurge, fn.EngagementSurge.Center, fn.EngagementSurge.Scale)
+	viewConcNorm := featureNorm(viewConc, fn.ViewConcentration.Center, fn.ViewConcentration.Scale)
+
 	// --- Score ---
 	w := s.cfg.Weights
-	raw := w.ViewAcceleration*viewAccel +
-		w.PostGrowthRate*postGrowth +
-		w.CreatorGrowthRate*creatorGrowth
+	raw := w.ViewAcceleration*viewAccelNorm +
+		w.PostGrowthRate*postGrowthNorm +
+		w.CreatorGrowthRate*creatorGrowthNorm
 	if engagementDim {
-		raw += w.EngagementSurge * engagementSurge
+		raw += w.EngagementSurge * engagementSurgeNorm
 	}
 	if viewConcDim {
-		raw += w.ViewConcentration * viewConc
+		raw += w.ViewConcentration * viewConcNorm
 	}
 	raw -= s.cfg.Bias
 	score := 100.0 * sigmoid(raw)
@@ -230,14 +255,19 @@ func (s *SigmoidV1) Calculate(ctx context.Context, trend *domain.Trend, reader c
 	base.Confidence = confidence
 	base.Phase = phase
 	base.Metadata = map[string]interface{}{
-		"view_accel":       viewAccel,
-		"post_growth":      postGrowth,
-		"creator_growth":   creatorGrowth,
-		"engagement_surge": engagementSurge,
-		"view_conc":        viewConc,
-		"raw":              raw,
-		"valid_count":      validCount,
-		"dim_coverage":     dimensionCoverage,
+		"view_accel":            viewAccel,
+		"view_accel_norm":       viewAccelNorm,
+		"post_growth":           postGrowth,
+		"post_growth_norm":      postGrowthNorm,
+		"creator_growth":        creatorGrowth,
+		"creator_growth_norm":   creatorGrowthNorm,
+		"engagement_surge":      engagementSurge,
+		"engagement_surge_norm": engagementSurgeNorm,
+		"view_conc":             viewConc,
+		"view_conc_norm":        viewConcNorm,
+		"raw":                   raw,
+		"valid_count":           validCount,
+		"dim_coverage":          dimensionCoverage,
 	}
 
 	return base, nil
@@ -247,6 +277,12 @@ func (s *SigmoidV1) Calculate(ctx context.Context, trend *domain.Trend, reader c
 
 func sigmoid(x float64) float64 {
 	return 1.0 / (1.0 + math.Exp(-x))
+}
+
+// featureNorm applies per-feature logistic normalization:
+// sigmoid((x - center) * scale)
+func featureNorm(x, center, scale float64) float64 {
+	return sigmoid((x - center) * scale)
 }
 
 func filterSignalsAfter(signals []*domain.Signal, from time.Time) []*domain.Signal {

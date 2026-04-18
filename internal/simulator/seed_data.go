@@ -130,36 +130,28 @@ func seedSignal(trendID string, h int) SignalData {
 		s.AvgEngagement = 0.035 + 0.015*(1.0-math.Exp(-0.03*t))
 		s.ViewConcentration = math.Min(0.65, 0.20+0.005*t)
 
-	case "seed-0005": // #电子木鱼 — Already Peaking → Declining
-		// High absolute values but no growth. Plateau for 50h, then decline.
-		if h < 50 {
-			// Small sinusoidal wobble around a constant — no net growth.
-			wobble := math.Sin(float64(h) * math.Pi / 12.0) // 24h period
-			s.UsageCount = 35000 + int64(2000.0*wobble)
-			s.UniqueCreators = 4500 + int64(300.0*wobble)
-			s.AvgViews = 800000.0 + 50000.0*wobble
-			s.AvgEngagement = 0.11 + 0.01*wobble
-			s.ViewConcentration = 0.60 + 0.05*wobble
-		} else {
-			// Steady decline
-			t := float64(h - 50)
-			decay := math.Exp(-0.03 * t)
-			s.UsageCount = int64(35000.0 * decay)
-			s.UniqueCreators = int64(4500.0 * decay)
-			s.AvgViews = 800000.0 * decay
-			s.AvgEngagement = 0.11 * decay
-			s.ViewConcentration = math.Max(0.10, 0.60*decay)
-		}
+	case "seed-0005": // #电子木鱼 — Already Peaking (plateau throughout)
+		// High absolute values but no net growth across the entire 96h window.
+		// Small sinusoidal wobble around a constant keeps post_growth near zero
+		// in any 6h window, so the strategy reports Phase="peaking" at evaluation time.
+		wobble := math.Sin(float64(h) * math.Pi / 12.0) // 24h period
+		s.UsageCount = 35000 + int64(1000.0*wobble)
+		s.UniqueCreators = 4500 + int64(200.0*wobble)
+		s.AvgViews = 800000.0 + 30000.0*wobble
+		s.AvgEngagement = 0.11 + 0.005*wobble
+		s.ViewConcentration = 0.60 + 0.03*wobble
 
 	case "seed-0006": // #复古胶片风 — Declining from start
-		// Medium start, exponential decay throughout.
+		// High start, fast exponential decay (k=0.06/h).
+		// Over 6h window at end: postGrowth ≈ -0.30, score < 25 with new normalization.
+		// Large base values ensure floor doesn't flatten the growth rate.
 		t := float64(h)
-		decay := math.Exp(-0.02 * t)
-		s.UsageCount = int64(math.Max(50, 2000.0*decay))
-		s.UniqueCreators = int64(math.Max(5, 200.0*decay))
-		s.AvgViews = math.Max(5000, 300000.0*decay)
-		s.AvgEngagement = math.Max(0.005, 0.07*decay)
-		s.ViewConcentration = math.Max(0.05, 0.35*decay)
+		decay := math.Exp(-0.06 * t)
+		s.UsageCount = int64(math.Max(50, 20000.0*decay))
+		s.UniqueCreators = int64(math.Max(5, 2000.0*decay))
+		s.AvgViews = math.Max(5000, 600000.0*decay)
+		s.AvgEngagement = math.Max(0.005, 0.10*decay)
+		s.ViewConcentration = math.Max(0.05, 0.45*decay)
 
 	case "seed-0007": // #冥想白噪音 — Flat/Stable (no growth at all)
 		s.UsageCount = 300
